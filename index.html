@@ -1,40 +1,81 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Location example</title>
-    <script>
-        var reqCount = 0;
+<html>
+  <head>
+    <meta name="viewport" content="initial‑scale=1.0, user‑scalable=no" />
+    <meta http‑equiv="content‑type" content="text/html; charset=UTF‑8" />
+    <title>Track me!</title>
 
-        navigator.geolocation.watchPosition(successCallback, errorCallback, options);
+    <script
+      async
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyANPJXyZnJG659k1QzEUfK3quG8aKjKrH8&callback=initMap"
+    ></script>
 
-        function successCallback(position) {
-            const {latitude, longitude} = position.coords;
-            reqCount++;
+    <script type="text/javascript">
+      let trackerId = 0;
+      let geocoder;
+      let map;
+      let userMarker;
+      const initialize = () => {
+        geocoder = new google.maps.Geocoder();
 
-            // Show a map centered at latitude / longitude.
-            map.innerHTML = '<iframe width="700" height="300" src="https://maps.google.com/maps?q='+latitude+','+longitude+'&amp;z=15&amp;output=embed"></iframe>';
-            document.getElementById("longitude").innerHTML = longitude;
-            document.getElementById("latitude").innerHTML = latitude;
-            console.log("Longitude: "+longitude)
-            console.log("Latitude: "+latitude);
+        navigator.geolocation.getCurrentPosition(function (pos) {
+          const latLng = new google.maps.LatLng(
+            pos.coords.latitude,
+            pos.coords.longitude
+          );
+          const options = {
+            zoom: 12,
+            center: latLng,
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+          };
+          map = new google.maps.Map(
+            document.getElementById("map_canvas"),
+            options
+          );
+          userMarker = new google.maps.Marker({
+            position: latLng,
+            map: map,
+            title: "You!",
+          });
+          showLocation(pos);
+        });
+        trackerId = navigator.geolocation.watchPosition(function (pos) {
+          var latLng = new google.maps.LatLng(
+            pos.coords.latitude,
+            pos.coords.longitude
+          );
+          map.setCenter(latLng);
+          userMarker.setPosition(latLng);
+          showLocation(pos);
+        });
+      };
+
+      const showLocation = (pos) => {
+        const latLng = new google.maps.LatLng(
+          pos.coords.latitude,
+          pos.coords.longitude
+        );
+        if (geocoder) {
+          geocoder.geocode({ latLng: latLng }, function (results, status) {
+            if (status == google.maps.GeocoderStatus.OK) {
+              if (results[1]) {
+                $("location").innerHTML = results[1].formatted_address;
+              }
+            }
+          });
         }
+      };
 
-        function errorCallback(error){
-            console.log("Could not get the user's current location " + error);
+      const stopTracking = () => {
+        if (trackerId) {
+          navigator.geolocation.clearWatch(trackerId);
         }
-
-        var options = {
-            enableHighAccuracy: false,
-            timeout: 5000,
-        }
+      };
     </script>
-</head>
-<body>
-    <div id="map"></div>
-    <h1 id="longitude"></h1>
-    <h1 id="latitude"></h1>
-</body>
+  </head>
+  <body style="margin: 0px; padding: 0px" onload="initialize()">
+    <div style="margin: 25px">
+      <input type="button" value="Stop tracking me!" onclick="stopTracking()" />
+    </div>
+    <div id="map_canvas" style="width: 100%; height: 90%; float: left"></div>
+  </body>
 </html>
